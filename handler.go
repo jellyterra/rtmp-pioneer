@@ -5,11 +5,12 @@
 package main
 
 import (
-	"context"
-	flvtag "github.com/yutopp/go-flv/tag"
+	"bytes"
+	log "github.com/sirupsen/logrus"
 	"github.com/yutopp/go-rtmp"
 	rtmpmsg "github.com/yutopp/go-rtmp/message"
 	"io"
+	"time"
 )
 
 type Handler struct {
@@ -18,51 +19,81 @@ type Handler struct {
 	ConnMsg *rtmpmsg.NetConnectionConnect
 	PubMsg  *rtmpmsg.NetStreamPublish
 
-	Ctx    context.Context
-	Cancel context.CancelFunc
+	Time int64
 
-	Pipe    *Pipe
-	FlvFile *FlvFile
+	Endpoints []Endpoint
 
 	HandleFunc func(h *Handler) error
 }
 
 func (h *Handler) OnConnect(timestamp uint32, cmd *rtmpmsg.NetConnectionConnect) error {
-	h.Pipe = NewPipe()
-
-	h.Ctx, h.Cancel = context.WithCancel(context.Background())
 	h.ConnMsg = cmd
 	return nil
 }
 
 func (h *Handler) OnPublish(_ *rtmp.StreamContext, timestamp uint32, cmd *rtmpmsg.NetStreamPublish) error {
 	h.PubMsg = cmd
-	return h.HandleFunc(h)
+	h.Time = time.Now().Unix()
+
+	err := h.HandleFunc(h)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return err
 }
 
 func (h *Handler) OnAudio(timestamp uint32, payload io.Reader) error {
-	var data flvtag.AudioData
-	err := flvtag.DecodeAudioData(payload, &data)
+	p, err := io.ReadAll(payload)
 	if err != nil {
 		return err
 	}
-	h.Pipe.WriteAudio(timestamp, &data)
 
-	return h.FlvFile.WriteAudio(timestamp, &data)
+	for _, ep := range h.Endpoints {
+		err := ep.WriteAudio(timestamp, p)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	return nil
 }
 
 func (h *Handler) OnVideo(timestamp uint32, payload io.Reader) error {
-	var data flvtag.VideoData
-	err := flvtag.DecodeVideoData(payload, &data)
+	p, err := io.ReadAll(payload)
 	if err != nil {
 		return err
 	}
-	h.Pipe.WriteVideo(timestamp, &data)
 
-	return h.FlvFile.WriteVideo(timestamp, &data)
+	for _, ep := range h.Endpoints {
+		err := ep.WriteVideo(timestamp, p)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	return nil
+}
+
+func (h *Handler) OnSetDataFrame(timestamp uint32, data *rtmpmsg.NetStreamSetDataFrame) error {
+	for _, ep := range h.Endpoints {
+		err := ep.WriteSetFrame(timestamp, &rtmpmsg.DataMessage{
+			Name:     "@setDataFrame",
+			Encoding: rtmpmsg.EncodingTypeAMF0,
+			Body:     bytes.NewReader(data.Payload),
+		})
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	return nil
 }
 
 func (h *Handler) OnClose() {
-	h.Cancel()
-	h.Pipe.Close()
+	for _, ep := range h.Endpoints {
+		ep.Close()
+	}
+
+	log.Println(h.Time, "Closed.")
 }

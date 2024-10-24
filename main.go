@@ -7,11 +7,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
-	"net"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/yutopp/go-rtmp"
+	"io"
+	"net"
 )
 
 var (
@@ -40,15 +39,27 @@ func _main() error {
 			return conn, &rtmp.ConnConfig{
 				Handler: &Handler{
 					HandleFunc: func(h *Handler) error {
-						h.FlvFile, err = CreateFlvFile(*outDir)
+
+						ep, err := DialRemote(h)
 						if err != nil {
 							return err
 						}
 
+						flvFile, err := CreateFlvFile(*outDir, fmt.Sprint(h.Time))
+						if err != nil {
+							return err
+						}
+
+						h.Endpoints = []Endpoint{
+							flvFile,
+							ep,
+						}
+
+						log.Println(h.Time, "Streaming started.")
+
 						return nil
 					},
 				},
-				Logger: log.StandardLogger(),
 
 				ControlState: rtmp.StreamControlStateConfig{
 					DefaultBandwidthWindowSize: 6 * 1024 * 1024 / 8,
@@ -57,6 +68,7 @@ func _main() error {
 		},
 	})
 
+	log.Println("Listen on", *serveAddr)
 	err = srv.Serve(l)
 	if err != nil {
 		return err

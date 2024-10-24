@@ -5,12 +5,12 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 	"github.com/yutopp/go-flv"
 	flvtag "github.com/yutopp/go-flv/tag"
+	rtmpmsg "github.com/yutopp/go-rtmp/message"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 type FlvFile struct {
@@ -18,8 +18,8 @@ type FlvFile struct {
 	Enc  *flv.Encoder
 }
 
-func CreateFlvFile(baseDir string) (*FlvFile, error) {
-	f, err := os.OpenFile(filepath.Join(baseDir, fmt.Sprint(time.Now().Unix(), ".flv")), os.O_WRONLY|os.O_CREATE, 0660)
+func CreateFlvFile(baseDir, filename string) (*FlvFile, error) {
+	f, err := os.OpenFile(filepath.Join(baseDir, filename+".flv"), os.O_WRONLY|os.O_CREATE, 0660)
 	if err != nil {
 		return nil, err
 	}
@@ -36,18 +36,38 @@ func CreateFlvFile(baseDir string) (*FlvFile, error) {
 	}, nil
 }
 
-func (e *FlvFile) WriteAudio(timestamp uint32, data *flvtag.AudioData) error {
+func (e *FlvFile) Close() {
+	_ = e.File.Close()
+}
+
+func (e *FlvFile) WriteAudio(timestamp uint32, payload []byte) error {
+	var data flvtag.AudioData
+	err := flvtag.DecodeAudioData(bytes.NewReader(payload), &data)
+	if err != nil {
+		return err
+	}
+
 	return e.Enc.Encode(&flvtag.FlvTag{
 		TagType:   flvtag.TagTypeAudio,
 		Timestamp: timestamp,
-		Data:      data,
+		Data:      &data,
 	})
 }
 
-func (e *FlvFile) WriteVideo(timestamp uint32, data *flvtag.VideoData) error {
+func (e *FlvFile) WriteVideo(timestamp uint32, payload []byte) error {
+	var data flvtag.VideoData
+	err := flvtag.DecodeVideoData(bytes.NewReader(payload), &data)
+	if err != nil {
+		return err
+	}
+
 	return e.Enc.Encode(&flvtag.FlvTag{
 		TagType:   flvtag.TagTypeVideo,
 		Timestamp: timestamp,
-		Data:      data,
+		Data:      &data,
 	})
+}
+
+func (e *FlvFile) WriteSetFrame(timestamp uint32, data *rtmpmsg.DataMessage) error {
+	return nil
 }
