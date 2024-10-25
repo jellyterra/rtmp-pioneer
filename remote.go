@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.com/yutopp/go-rtmp"
 	rtmpmsg "github.com/yutopp/go-rtmp/message"
 	"net/url"
@@ -33,7 +32,7 @@ func DialRemote(h *Handler) (*Remote, error) {
 	host := sp[1]
 	connMsg.App = sp[len(sp)-1]
 
-	log.Println("Connecting to", strings.Join(sp[1:], "/"))
+	fmt.Println(h.Time, "Connecting to", strings.Join(sp[1:], "/"))
 
 	client, err := rtmp.Dial("rtmp", host+":1935", &rtmp.ConnConfig{})
 	if err != nil {

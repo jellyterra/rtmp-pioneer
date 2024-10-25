@@ -6,7 +6,7 @@ package main
 
 import (
 	"bytes"
-	log "github.com/sirupsen/logrus"
+	"fmt"
 	"github.com/yutopp/go-rtmp"
 	rtmpmsg "github.com/yutopp/go-rtmp/message"
 	"io"
@@ -37,7 +37,7 @@ func (h *Handler) OnPublish(_ *rtmp.StreamContext, timestamp uint32, cmd *rtmpms
 
 	err := h.HandleFunc(h)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 	}
 
 	return err
@@ -52,7 +52,7 @@ func (h *Handler) OnAudio(timestamp uint32, payload io.Reader) error {
 	for _, ep := range h.Endpoints {
 		err := ep.WriteAudio(timestamp, p)
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 		}
 	}
 
@@ -68,7 +68,7 @@ func (h *Handler) OnVideo(timestamp uint32, payload io.Reader) error {
 	for _, ep := range h.Endpoints {
 		err := ep.WriteVideo(timestamp, p)
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 		}
 	}
 
@@ -83,7 +83,7 @@ func (h *Handler) OnSetDataFrame(timestamp uint32, data *rtmpmsg.NetStreamSetDat
 			Body:     bytes.NewReader(data.Payload),
 		})
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 		}
 	}
 
@@ -95,5 +95,5 @@ func (h *Handler) OnClose() {
 		ep.Close()
 	}
 
-	log.Println(h.Time, "Closed.")
+	fmt.Println(h.Time, "Closed.")
 }

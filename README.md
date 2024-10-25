@@ -1,6 +1,18 @@
 # rtmp-pioneer
 Record and forward RTMP streams to multiple endpoints.
 
+## Install
+
+### Releases
+
+Download the executable in [releases](https://github.com/jellyterra/rtmp-pioneer/releases).
+
+### Build from source
+
+```shell
+go install github.com/jellyterra/rtmp-pioneer@latest
+```
+
 ## Usage
 
 ```
@@ -25,8 +37,8 @@ Pioneer: `k1-i.jellyterra.com`
 
 ```
 $ ./rtmp-pioneer -a :1935 -o ~/Videos
-INFO[0000] Listen on :1935
-INFO[0005] Connecting to live-push.bilivideo.com/live-bvc
-INFO[0005] 1729790878 Streaming started.
-INFO[0010] 1729790878 Closed.
+Listen on :1935
+1729790878 Connecting to live-push.bilivideo.com/live-bvc
+1729790878 Streaming started.
+1729790878 Closed.
 ```

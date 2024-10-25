@@ -7,7 +7,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.com/yutopp/go-rtmp"
 	"io"
 	"net"
@@ -55,7 +54,7 @@ func _main() error {
 							ep,
 						}
 
-						log.Println(h.Time, "Streaming started.")
+						fmt.Println(h.Time, "Streaming started.")
 
 						return nil
 					},
@@ -68,7 +67,7 @@ func _main() error {
 		},
 	})
 
-	log.Println("Listen on", *serveAddr)
+	fmt.Println("Listen on", *serveAddr)
 	err = srv.Serve(l)
 	if err != nil {
 		return err
