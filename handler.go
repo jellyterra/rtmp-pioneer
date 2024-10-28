@@ -33,7 +33,7 @@ func (h *Handler) OnConnect(timestamp uint32, cmd *rtmpmsg.NetConnectionConnect)
 
 func (h *Handler) OnPublish(_ *rtmp.StreamContext, timestamp uint32, cmd *rtmpmsg.NetStreamPublish) error {
 	h.PubMsg = cmd
-	h.Time = time.Now().Unix()
+	h.Time = time.Now().UnixMicro()
 
 	err := h.HandleFunc(h)
 	if err != nil {

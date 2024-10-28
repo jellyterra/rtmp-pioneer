@@ -10,11 +10,17 @@ import (
 	"github.com/yutopp/go-rtmp"
 	"io"
 	"net"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var (
-	outDir    = flag.String("o", "./", "Stream save directory.")
-	serveAddr = flag.String("a", ":1935", "Server listen address.")
+	outDir     = flag.String("o", "./", "Stream save directory.")
+	serveAddr  = flag.String("a", ":1935", "Server listen address.")
+	expireDays = flag.Int("expire", 0, "Expiration days.")
 )
 
 func main() {
@@ -27,6 +33,10 @@ func main() {
 }
 
 func _main() error {
+
+	if *expireDays != 0 {
+		go autoExpire()
+	}
 
 	l, err := net.Listen("tcp", *serveAddr)
 	if err != nil {
@@ -74,4 +84,41 @@ func _main() error {
 	}
 
 	return nil
+}
+
+func autoExpire() {
+	for {
+		err := func() error {
+			entries, err := os.ReadDir(*outDir)
+			if err != nil {
+				return err
+			}
+
+			deadline := time.Now().AddDate(0, 0, -*expireDays)
+
+			for _, entry := range entries {
+				if entry.IsDir() {
+					continue
+				}
+
+				ut, err := strconv.ParseInt(strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())), 10, 64)
+				if err != nil {
+					return err
+				}
+				t := time.UnixMicro(ut)
+
+				if t.Before(deadline) {
+					fmt.Println("Expired", t.String())
+					_ = os.Remove(filepath.Join(*outDir, entry.Name()))
+				}
+			}
+
+			return nil
+		}()
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		time.Sleep(time.Hour * 1)
+	}
 }
