@@ -47,27 +47,7 @@ func _main() error {
 		OnConnect: func(conn net.Conn) (io.ReadWriteCloser, *rtmp.ConnConfig) {
 			return conn, &rtmp.ConnConfig{
 				Handler: &Handler{
-					HandleFunc: func(h *Handler) error {
-
-						ep, err := DialRemote(h)
-						if err != nil {
-							return err
-						}
-
-						flvFile, err := CreateFlvFile(*outDir, fmt.Sprint(h.Time))
-						if err != nil {
-							return err
-						}
-
-						h.Endpoints = []Endpoint{
-							flvFile,
-							ep,
-						}
-
-						fmt.Println(h.Time, "Streaming started.")
-
-						return nil
-					},
+					HandleFunc: handleConn,
 				},
 
 				ControlState: rtmp.StreamControlStateConfig{
@@ -101,7 +81,7 @@ func autoExpire() {
 					continue
 				}
 
-				ut, err := strconv.ParseInt(strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())), 10, 64)
+				ut, err := strconv.ParseInt(strings.Split(entry.Name(), ".")[0], 10, 64)
 				if err != nil {
 					return err
 				}
@@ -121,4 +101,39 @@ func autoExpire() {
 
 		time.Sleep(time.Hour * 1)
 	}
+}
+
+func handleConn(h *Handler) error {
+	sp := strings.Split(h.Url.Path, "/")
+
+	switch sp[1] {
+	case "direct":
+		return handleDirect(h, sp[2], sp[3])
+	default:
+		return fmt.Errorf("unexpected route: /%s", sp[1])
+	}
+}
+
+func handleDirect(h *Handler, host, app string) error {
+
+	fmt.Println(h.Time, "Direct route.")
+
+	ep, err := DialRemote(h, host, app)
+	if err != nil {
+		return err
+	}
+
+	flvFile, err := CreateFlvFile(*outDir, fmt.Sprint(h.Time))
+	if err != nil {
+		return err
+	}
+
+	h.Endpoints = []Endpoint{
+		flvFile,
+		ep,
+	}
+
+	fmt.Println(h.Time, "Streaming started.")
+
+	return nil
 }

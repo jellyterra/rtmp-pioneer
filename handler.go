@@ -10,6 +10,7 @@ import (
 	"github.com/yutopp/go-rtmp"
 	rtmpmsg "github.com/yutopp/go-rtmp/message"
 	"io"
+	"net/url"
 	"time"
 )
 
@@ -18,6 +19,7 @@ type Handler struct {
 
 	ConnMsg *rtmpmsg.NetConnectionConnect
 	PubMsg  *rtmpmsg.NetStreamPublish
+	Url     *url.URL
 
 	Time int64
 
@@ -26,8 +28,13 @@ type Handler struct {
 	HandleFunc func(h *Handler) error
 }
 
-func (h *Handler) OnConnect(timestamp uint32, cmd *rtmpmsg.NetConnectionConnect) error {
+func (h *Handler) OnConnect(timestamp uint32, cmd *rtmpmsg.NetConnectionConnect) (err error) {
 	h.ConnMsg = cmd
+	h.Url, err = url.Parse(cmd.Command.TCURL)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -37,7 +44,7 @@ func (h *Handler) OnPublish(_ *rtmp.StreamContext, timestamp uint32, cmd *rtmpms
 
 	err := h.HandleFunc(h)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(h.Time, "Error:", err)
 	}
 
 	return err

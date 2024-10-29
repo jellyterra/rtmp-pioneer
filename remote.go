@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"github.com/yutopp/go-rtmp"
 	rtmpmsg "github.com/yutopp/go-rtmp/message"
-	"net/url"
-	"strings"
 )
 
 type Remote struct {
@@ -18,21 +16,13 @@ type Remote struct {
 	Stream *rtmp.Stream
 }
 
-func DialRemote(h *Handler) (*Remote, error) {
+func DialRemote(h *Handler, host, app string) (*Remote, error) {
 
 	connMsg := h.ConnMsg.Command
+	connMsg.App = app
+	connMsg.TCURL = "rtmp://" + host + "/" + app
 
-	u, _ := url.Parse(connMsg.TCURL)
-
-	sp := strings.Split(u.Path, "/")
-	if len(sp) < 3 {
-		return nil, fmt.Errorf("invalid")
-	}
-
-	host := sp[1]
-	connMsg.App = sp[len(sp)-1]
-
-	fmt.Println(h.Time, "Connecting to", strings.Join(sp[1:], "/"))
+	fmt.Println(h.Time, "Connecting to", connMsg.TCURL)
 
 	client, err := rtmp.Dial("rtmp", host+":1935", &rtmp.ConnConfig{})
 	if err != nil {

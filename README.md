@@ -25,21 +25,30 @@ Usage of ./rtmp-pioneer:
         Stream save directory. (default "./")
 ```
 
-Server: `rtmp://<Pioneer Addr>/<Server Addr>/<App>`
+### Expiration
+
+Outdated files will be automatically removed.
+
+# Route
+
+## Direct
+
+Server: `rtmp://<Pioneer Addr>/direct/<Server Addr>/<App>`
 
 Stream key: **AS IS**
 
 ### Example
 
-`rtmp://k1-i.jellyterra.com/live-push.bilivideo.com/live-bvc/`
+`rtmp://k1-i.jellyterra.com/direct/live-push.bilivideo.com/live-bvc`
 
-Live server: `live-push.bilivideo.com/live-bvc/`
+Live server: `live-push.bilivideo.com/live-bvc`
 
 Pioneer: `k1-i.jellyterra.com`
 
 ```
-$ ./rtmp-pioneer -a :1935 -o ~/Videos
+$ ./rtmp-pioneer -o ~/Videos
 Listen on :1935
+1730107018200000 Direct route.
 1730107018200000 Connecting to live-push.bilivideo.com/live-bvc
 1730107018200000 Streaming started.
 1730107018200000 Closed.
