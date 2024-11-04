@@ -109,6 +109,8 @@ func handleConn(h *Handler) error {
 	switch sp[1] {
 	case "direct":
 		return handleDirect(h, sp[2], sp[3])
+	case "record":
+		return handleRecord(h)
 	default:
 		return fmt.Errorf("unexpected route: /%s", sp[1])
 	}
@@ -134,6 +136,24 @@ func handleDirect(h *Handler, host, app string) error {
 	}
 
 	fmt.Println(h.Time, "Streaming started.")
+
+	return nil
+}
+
+func handleRecord(h *Handler) error {
+
+	fmt.Println(h.Time, "No route: recording only.")
+
+	flvFile, err := CreateFlvFile(*outDir, fmt.Sprint(h.Time))
+	if err != nil {
+		return err
+	}
+
+	h.Endpoints = []Endpoint{
+		flvFile,
+	}
+
+	fmt.Println(h.Time, "Recording started.")
 
 	return nil
 }

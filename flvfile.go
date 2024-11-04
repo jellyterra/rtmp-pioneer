@@ -19,7 +19,7 @@ type FlvFile struct {
 }
 
 func CreateFlvFile(baseDir, filename string) (*FlvFile, error) {
-	f, err := os.OpenFile(filepath.Join(baseDir, filename+".flv"), os.O_WRONLY|os.O_CREATE, 0660)
+	f, err := os.Create(filepath.Join(baseDir, filename+".flv"))
 	if err != nil {
 		return nil, err
 	}

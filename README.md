@@ -31,6 +31,12 @@ Outdated files will be automatically removed.
 
 # Route
 
+## No route (recording-only)
+
+Server: `rtmp://<Pioneer Addr>/record`
+
+Stream key **will be ignored**.
+
 ## Direct
 
 Server: `rtmp://<Pioneer Addr>/direct/<Server Addr>/<App>`
