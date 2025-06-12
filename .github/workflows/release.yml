@@ -19,42 +19,27 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23'
-
-      - run: mkdir ~/build
+          go-version: '1.23.9'
 
       - name: Build
         shell: bash
         run: |
+          mkdir ~/build
           set +e
           go tool dist list | while IFS='/' read -ra TARGET
           do
           export GOOS=${TARGET[0]}
           export GOARCH=${TARGET[1]}
           echo "Building target $GOOS/$GOARCH"
-          go build -o ~/build/rtmp-pioneer-${{ github.ref_name }}-$GOOS-$GOARCH .
+          go build -o ~/build/rtmp-pioneer-${{ github.ref_name }}-$GOOS-$GOARCH
           done
-
-      - name: Compress via Zstd
-        run: zstd ~/build/rtmp-pioneer-${{ github.ref_name }}-*
-
-      - name: Generate Checksums
-        run: sha256sum ~/build/*zst > ~/build/SHA256SUMS.txt
+          cd ~/build
+          zstd *
+          sha256sum *zst > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
-          body: RTMP Pioneer ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Artifact
         env:
           GH_TOKEN: ${{ github.token }}
         run:
-          gh release -R ${{ github.repository }} upload ${{ github.ref_name }} ~/build/SHA256SUMS.txt ~/build/*zst --clobber
+          gh release -R ${{ github.repository }} create -F README.md ${{ github.ref_name }} -t ${{ github.ref_name }} ~/build/SHA256SUMS.txt ~/build/*zst

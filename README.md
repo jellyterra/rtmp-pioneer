@@ -1,11 +1,10 @@
-# rtmp-pioneer
-Record and forward RTMP streams to multiple endpoints.
+# RTMP Pioneer
+
+Record and forward RTMP streams to multiple live streaming servers.
 
 ## Install
 
-### Releases
-
-Download the executable in [releases](https://github.com/jellyterra/rtmp-pioneer/releases).
+### [Releases](https://github.com/jellyterra/rtmp-pioneer/releases) download
 
 ### Build from source
 
@@ -18,16 +17,20 @@ go install github.com/jellyterra/rtmp-pioneer@latest
 ```
 Usage of ./rtmp-pioneer:
   -a string
-        Server listen address. (default ":1935")
+        Server listening address. (default ":1935")
   -expire int
         Expiration days.
   -o string
-        Stream save directory. (default "./")
+        Streaming save directory. (default "./rec")
+  -p string
+        Profile directory. (default "./profile")
 ```
 
 ### Expiration
 
 Outdated files will be automatically removed.
+
+Set option `--expire` to non-zero value to enable it.
 
 # Route
 
@@ -35,27 +38,77 @@ Outdated files will be automatically removed.
 
 Server: `rtmp://<Pioneer Addr>/record`
 
-Stream key **will be ignored**.
-
-## Direct
-
-Server: `rtmp://<Pioneer Addr>/direct/<Server Addr>/<App>`
-
-Stream key: **AS IS**
+Streaming key: **ignored**
 
 ### Example
 
-`rtmp://k1-i.jellyterra.com/direct/live-push.bilivideo.com/live-bvc`
-
-Live server: `live-push.bilivideo.com/live-bvc`
-
-Pioneer: `k1-i.jellyterra.com`
+Server: `rtmp://rtmp-pioneer.jellyterra.com/record`
 
 ```
-$ ./rtmp-pioneer -o ~/Videos
+$ rtmp-pioneer -o ~/Videos
 Listen on :1935
-1730107018200000 Direct route.
-1730107018200000 Connecting to live-push.bilivideo.com/live-bvc
-1730107018200000 Streaming started.
-1730107018200000 Closed.
+1749123456123456 Inbound - recording only.
+1749123456123456 Streaming started.
+1749123456123456 Closed.
+```
+
+## Direct
+
+Server: `rtmp://<Pioneer Addr>/direct/<Server Addr>/<Path>`
+
+Streaming key: **AS IS to the remote server**
+
+### Example
+
+Server: `rtmp://rtmp-pioneer.jellyterra.com/direct/live-push.bilivideo.com/live-bvc/`
+
+Streaming key: `?streamname=&key=&schedule=rtmp&pflag=1`
+
+```
+$ rtmp-pioneer -o ~/Videos
+Listen on :1935
+1749123456123456 Inbound - direct forwarding.
+1749123456123456 Endpoint connecting: live-push.bilivideo.com
+1749123456123456 Streaming started.
+1749123456123456 Closed.
+```
+
+## Profile
+
+Server: `rtmp://<Pioneer Addr>/profile/<Profile Name>`
+
+Streaming key: **ignored**
+
+Profile example: `./profile/jellyterra.json`
+
+```json
+{
+  "recording": true,
+  "remotes": [
+    {
+      "host": "owncast.jellyterra.com",
+      "path": "live",
+      "key": "password"
+    },
+    {
+      "host": "live-push.bilivideo.com",
+      "path": "live-bvc/",
+      "key": "?streamname=&key=&schedule=rtmp&pflag=1"
+    }
+  ]
+}
+```
+
+### Example
+
+Server: `rtmp://rtmp-pioneer.jellyterra.com/profile/jellyterra`
+
+```
+$ rtmp-pioneer -o ~/Videos
+Listen on :1935
+1749123456123456 Inbound - profile: jellyterra
+1749123456123456 Endpoint 0 connecting: owncast.jellyterra.com
+1749123456123456 Endpoint 1 connecting: live-push.bilivideo.com
+1749123456123456 Streaming started.
+1749123456123456 Closed.
 ```

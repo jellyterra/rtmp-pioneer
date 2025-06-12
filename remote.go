@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/yutopp/go-rtmp"
 	rtmpmsg "github.com/yutopp/go-rtmp/message"
 )
@@ -16,13 +15,21 @@ type Remote struct {
 	Stream *rtmp.Stream
 }
 
-func DialRemote(h *Handler, host, app string) (*Remote, error) {
+func DialRemote(h *Handler, host, path, key string) (*Remote, error) {
 
-	connMsg := h.ConnMsg.Command
-	connMsg.App = app
-	connMsg.TCURL = "rtmp://" + host + "/" + app
-
-	fmt.Println(h.Time, "Connecting to", connMsg.TCURL)
+	up := h.ConnMsg.Command
+	connMsg := rtmpmsg.NetConnectionConnectCommand{
+		App:            path,
+		Type:           up.Type,
+		FlashVer:       up.FlashVer,
+		TCURL:          "rtmp://" + host + "/" + path,
+		Fpad:           up.Fpad,
+		Capabilities:   up.Capabilities,
+		AudioCodecs:    up.AudioCodecs,
+		VideoCodecs:    up.VideoCodecs,
+		VideoFunction:  up.VideoFunction,
+		ObjectEncoding: up.ObjectEncoding,
+	}
 
 	client, err := rtmp.Dial("rtmp", host+":1935", &rtmp.ConnConfig{})
 	if err != nil {
@@ -41,7 +48,11 @@ func DialRemote(h *Handler, host, app string) (*Remote, error) {
 		return nil, err
 	}
 
-	err = stream.Publish(h.PubMsg)
+	err = stream.Publish(&rtmpmsg.NetStreamPublish{
+		CommandObject:  nil,
+		PublishingName: key,
+		PublishingType: h.PubMsg.PublishingType,
+	})
 	if err != nil {
 		return nil, err
 	}

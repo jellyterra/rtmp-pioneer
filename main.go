@@ -5,12 +5,14 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/yutopp/go-rtmp"
 	"io"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -18,9 +20,10 @@ import (
 )
 
 var (
-	outDir     = flag.String("o", "./", "Stream save directory.")
-	serveAddr  = flag.String("a", ":1935", "Server listen address.")
+	outDir     = flag.String("o", "./rec", "Streaming save directory.")
+	serveAddr  = flag.String("a", ":1935", "Server listening address.")
 	expireDays = flag.Int("expire", 0, "Expiration days.")
+	profileDir = flag.String("p", "./profile", "Profile directory.")
 )
 
 func main() {
@@ -88,7 +91,7 @@ func autoExpire() {
 				t := time.UnixMicro(ut)
 
 				if t.Before(deadline) {
-					fmt.Println("Expired", t.String())
+					fmt.Println(ut, "Expired at", t.String())
 					_ = os.Remove(filepath.Join(*outDir, entry.Name()))
 				}
 			}
@@ -106,21 +109,35 @@ func autoExpire() {
 func handleConn(h *Handler) error {
 	sp := strings.Split(h.Url.Path, "/")
 
+	var err error
+
 	switch sp[1] {
 	case "direct":
-		return handleDirect(h, sp[2], sp[3])
+		h.Logln("Inbound - direct forwarding.")
+		err = handleDirect(h, sp[2], sp[3])
 	case "record":
-		return handleRecord(h)
+		h.Logln("Inbound - recording only.")
+		err = handleRecord(h)
+	case "profile":
+		h.Logln("Inbound - profile:", sp[2])
+		err = handleProfile(h, *profileDir, sp[2])
 	default:
-		return fmt.Errorf("unexpected route: /%s", sp[1])
+		err = fmt.Errorf("unexpected route mode: /%s", sp[1])
 	}
+	if err != nil {
+		return err
+	}
+
+	h.Logln("Streaming started.")
+
+	return nil
 }
 
-func handleDirect(h *Handler, host, app string) error {
+func handleDirect(h *Handler, host, path string) error {
 
-	fmt.Println(h.Time, "Direct route.")
+	h.Logln("Endpoint connecting:", host)
 
-	ep, err := DialRemote(h, host, app)
+	ep, err := DialRemote(h, host, path, h.PubMsg.PublishingName)
 	if err != nil {
 		return err
 	}
@@ -135,14 +152,10 @@ func handleDirect(h *Handler, host, app string) error {
 		ep,
 	}
 
-	fmt.Println(h.Time, "Streaming started.")
-
 	return nil
 }
 
 func handleRecord(h *Handler) error {
-
-	fmt.Println(h.Time, "No route: recording only.")
 
 	flvFile, err := CreateFlvFile(*outDir, fmt.Sprint(h.Time))
 	if err != nil {
@@ -153,7 +166,49 @@ func handleRecord(h *Handler) error {
 		flvFile,
 	}
 
-	fmt.Println(h.Time, "Recording started.")
+	return nil
+}
+
+func handleProfile(h *Handler, profileDir, profileName string) error {
+
+	b, err := os.ReadFile(path.Join(profileDir, profileName+".json"))
+	switch {
+	case err == nil:
+	case os.IsNotExist(err):
+		return fmt.Errorf("profile not found: %s", profileName)
+	default:
+		return err
+	}
+
+	var profile Profile
+
+	err = json.Unmarshal(b, &profile)
+	if err != nil {
+		return err
+	}
+
+	var endpoints []Endpoint
+
+	for i, remote := range profile.Remotes {
+		h.Logln("Endpoint", i, "connecting:", remote.Host)
+
+		ep, err := DialRemote(h, remote.Host, remote.Path, remote.Key)
+		if err != nil {
+			return err
+		}
+
+		endpoints = append(endpoints, ep)
+	}
+
+	if profile.Recording {
+		flvFile, err := CreateFlvFile(*outDir, fmt.Sprint(h.Time))
+		if err != nil {
+			return err
+		}
+		endpoints = append(endpoints, flvFile)
+	}
+
+	h.Endpoints = endpoints
 
 	return nil
 }
