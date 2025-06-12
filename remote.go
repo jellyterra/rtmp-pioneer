@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"github.com/yutopp/go-rtmp"
 	rtmpmsg "github.com/yutopp/go-rtmp/message"
+	"net/url"
 )
 
 type Remote struct {
@@ -31,7 +32,15 @@ func DialRemote(h *Handler, host, path, key string) (*Remote, error) {
 		ObjectEncoding: up.ObjectEncoding,
 	}
 
-	client, err := rtmp.Dial("rtmp", host+":1935", &rtmp.ConnConfig{})
+	u, err := url.Parse("rtmp://" + host)
+	if err != nil {
+		return nil, err
+	}
+	if u.Port() == "" {
+		host += ":1935"
+	}
+
+	client, err := rtmp.Dial("rtmp", host, &rtmp.ConnConfig{})
 	if err != nil {
 		return nil, err
 	}
