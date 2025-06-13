@@ -13,4 +13,10 @@ type StreamServerConfig struct {
 type Profile struct {
 	Remotes   []StreamServerConfig `json:"remotes"`
 	Recording bool                 `json:"recording"`
+
+	// Events:
+	// beforeConnect
+	// afterStart
+	// afterClose
+	Webhooks map[string][]*WebhookConfig `json:"webhooks"`
 }

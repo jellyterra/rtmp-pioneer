@@ -187,6 +187,15 @@ func handleProfile(h *Handler, profileDir, profileName string) error {
 		return err
 	}
 
+	for i, webhook := range profile.Webhooks["beforeConnect"] {
+		h.Logln("Webhook beforeConnect - requesting index", i, "url:", webhook.URL)
+		err := DoWebhook(h, webhook)
+		if err != nil {
+			h.Logln("Webhook beforeConnect - failed:", err)
+			return err
+		}
+	}
+
 	var endpoints []Endpoint
 
 	for i, remote := range profile.Remotes {
@@ -209,6 +218,25 @@ func handleProfile(h *Handler, profileDir, profileName string) error {
 	}
 
 	h.Endpoints = endpoints
+
+	for i, webhook := range profile.Webhooks["afterClose"] {
+		h.HooksOnClose = append(h.HooksOnClose, func() {
+			h.Logln("Webhook afterClose - requesting index", i, "url:", webhook.URL)
+			err := DoWebhook(h, webhook)
+			if err != nil {
+				h.Logln("Webhook afterClose - failed:", err)
+			}
+		})
+	}
+
+	for i, webhook := range profile.Webhooks["afterStart"] {
+		h.Logln("Webhook afterStart - requesting index", i, "url:", webhook.URL)
+		err := DoWebhook(h, webhook)
+		if err != nil {
+			h.Logln("Webhook afterStart - failed:", err)
+			return err
+		}
+	}
 
 	return nil
 }

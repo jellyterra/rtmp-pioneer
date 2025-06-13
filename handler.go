@@ -26,6 +26,8 @@ type Handler struct {
 	Endpoints []Endpoint
 
 	HandleFunc func(h *Handler) error
+
+	HooksOnClose []func()
 }
 
 func (h *Handler) Logln(a ...interface{}) {
@@ -133,4 +135,9 @@ func (h *Handler) OnSetDataFrame(timestamp uint32, data *rtmpmsg.NetStreamSetDat
 	return nil
 }
 
-func (h *Handler) OnClose() { h.Close() }
+func (h *Handler) OnClose() {
+	h.Close()
+	for _, hook := range h.HooksOnClose {
+		hook()
+	}
+}
