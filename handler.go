@@ -36,20 +36,12 @@ func (h *Handler) Logln(a ...interface{}) {
 
 func (h *Handler) Close() {
 	for _, ep := range h.Endpoints {
-		if ep == nil {
-			continue
-		}
-
 		ep.Close()
 	}
-
-	h.Logln("Closed.")
 }
 
 func (h *Handler) EndpointError(i int, err error) error {
 	h.Logln("Endpoint", i, "error:", err)
-	h.Endpoints[i].Close()
-	h.Endpoints[i] = nil
 	return err
 }
 
@@ -63,7 +55,7 @@ func (h *Handler) OnConnect(timestamp uint32, cmd *rtmpmsg.NetConnectionConnect)
 	return nil
 }
 
-func (h *Handler) OnPublish(_ *rtmp.StreamContext, timestamp uint32, cmd *rtmpmsg.NetStreamPublish) error {
+func (h *Handler) OnPublish(_ *rtmp.StreamContext, _ uint32, cmd *rtmpmsg.NetStreamPublish) error {
 	h.PubMsg = cmd
 	h.Time = time.Now().UnixMicro()
 
@@ -83,10 +75,6 @@ func (h *Handler) OnAudio(timestamp uint32, payload io.Reader) error {
 	}
 
 	for i, ep := range h.Endpoints {
-		if ep == nil {
-			continue
-		}
-
 		err := ep.WriteAudio(timestamp, p)
 		if err != nil {
 			return h.EndpointError(i, err)
@@ -103,10 +91,6 @@ func (h *Handler) OnVideo(timestamp uint32, payload io.Reader) error {
 	}
 
 	for i, ep := range h.Endpoints {
-		if ep == nil {
-			continue
-		}
-
 		err := ep.WriteVideo(timestamp, p)
 		if err != nil {
 			return h.EndpointError(i, err)
@@ -118,10 +102,6 @@ func (h *Handler) OnVideo(timestamp uint32, payload io.Reader) error {
 
 func (h *Handler) OnSetDataFrame(timestamp uint32, data *rtmpmsg.NetStreamSetDataFrame) error {
 	for i, ep := range h.Endpoints {
-		if ep == nil {
-			continue
-		}
-
 		err := ep.WriteSetFrame(timestamp, &rtmpmsg.DataMessage{
 			Name:     "@setDataFrame",
 			Encoding: rtmpmsg.EncodingTypeAMF0,
@@ -137,6 +117,7 @@ func (h *Handler) OnSetDataFrame(timestamp uint32, data *rtmpmsg.NetStreamSetDat
 
 func (h *Handler) OnClose() {
 	h.Close()
+	h.Logln("Closed.")
 	for _, hook := range h.HooksOnClose {
 		hook()
 	}
